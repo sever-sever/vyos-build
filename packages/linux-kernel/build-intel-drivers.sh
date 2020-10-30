@@ -14,7 +14,6 @@ declare -a intel=(
     "http://dev.packages.vyos.net/source-mirror/ixgbevf-4.9.3.tar.gz"
     "http://dev.packages.vyos.net/source-mirror/igb-5.4.6.tar.gz"
     "http://dev.packages.vyos.net/source-mirror/i40e-2.13.10.tar.gz"
-    "http://dev.packages.vyos.net/source-mirror/iavf-4.0.1.tar.gz"
 )
 
 for url in "${intel[@]}"

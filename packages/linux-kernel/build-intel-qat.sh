@@ -10,7 +10,7 @@ fi
 . ${KERNEL_VAR_FILE}
 
 declare -a intel=(
-    "https://01.org/sites/default/files/downloads/qat1.7.l.4.11.0-00001.tar.gz"
+    "https://01.org/sites/default/files/downloads/qat1.7.l.4.9.0-00008.tar_0.gz"
 )
 
 for url in "${intel[@]}"
@@ -27,7 +27,6 @@ do
     DEBIAN_ARCH=$(dpkg --print-architecture)
     DEBIAN_DIR="${CWD}/vyos-intel-${DRIVER_NAME}_${DRIVER_VERSION}${DRIVER_VERSION_EXTRA}_${DEBIAN_ARCH}"
     DEBIAN_CONTROL="${DEBIAN_DIR}/DEBIAN/control"
-    DEBIAN_POSTINST="${CWD}/vyos-intel-qat.postinst"
 
     # Fetch Intel driver source from SourceForge
     if [ -e ${DRIVER_FILE} ]; then
@@ -51,16 +50,21 @@ do
         exit 1
     fi
 
+    # Intel QAT drivers are not ported to the latest Linux Kernel API :(
+    # this is done by our custom patch.
+    PATCH_DIR=${CWD}/patches/intel-qat
+    for patch in $(ls ${PATCH_DIR})
+    do
+        echo "I: Apply Intel QAT patch: ${PATCH_DIR}/${patch}"
+        patch -p1 < ${PATCH_DIR}/${patch}
+    done
+
     echo "I: Compile Kernel module for Intel ${DRIVER_NAME} driver"
     mkdir -p ${DEBIAN_DIR}/lib/firmware ${DEBIAN_DIR}/usr/local/bin ${DEBIAN_DIR}/usr/lib/x86_64-linux-gnu ${DEBIAN_DIR}/etc/init.d
-    CFLAGS="-march=native" KERNEL_SOURCE_ROOT=${KERNEL_DIR} ./configure --enable-kapi --enable-qat-lkcf
+    KERNEL_SOURCE_ROOT=${KERNEL_DIR} ./configure --enable-kapi --enable-qat-lkcf
     make -j $(getconf _NPROCESSORS_ONLN) all
     make INSTALL_MOD_PATH=${DEBIAN_DIR} INSTALL_FW_PATH=${DEBIAN_DIR} \
         qat-driver-install
-
-    if [ "x$?" != "x0" ]; then
-        exit 1
-    fi
 
     cp build/*.bin ${DEBIAN_DIR}/lib/firmware
     cp build/*.so ${DEBIAN_DIR}/usr/lib/x86_64-linux-gnu
@@ -70,27 +74,19 @@ do
     chmod 644 ${DEBIAN_DIR}/lib/firmware/*
     chmod 755 ${DEBIAN_DIR}/etc/init.d/* ${DEBIAN_DIR}/usr/local/bin/*
 
-    if [ -f ${DEBIAN_DIR}.deb ]; then
-        rm ${DEBIAN_DIR}.deb
-    fi
-
     # build Debian package
     echo "I: Building Debian package vyos-intel-${DRIVER_NAME}"
-    cd ${CWD}
-
     # delete non required files which are also present in the kernel package
     # und thus lead to duplicated files
     find ${DEBIAN_DIR} -name "modules.*" | xargs rm -f
+    cd ${CWD}
 
-    echo "#!/bin/sh" > ${DEBIAN_POSTINST}
-    echo "/sbin/depmod -a ${KERNEL_VERSION}${KERNEL_SUFFIX}" >> ${DEBIAN_POSTINST}
+    echo "#!/bin/sh" > ${DEBIAN_DIR}/vyos-intel-qat.postinst
+    echo "/sbin/depmod -a ${KERNEL_VERSION}${KERNEL_SUFFIX}" >> ${DEBIAN_DIR}/vyos-intel-qat.postinst
 
     fpm --input-type dir --output-type deb --name vyos-intel-${DRIVER_NAME} \
         --version ${DRIVER_VERSION}${DRIVER_VERSION_EXTRA} --deb-compression gz \
-        --maintainer "VyOS Package Maintainers <maintainers@vyos.net>" \
-        --description "Vendor based driver for Intel ${DRIVER_NAME}" \
-        --depends linux-image-${KERNEL_VERSION}${KERNEL_SUFFIX} \
-        --license "GPL2" -C ${DEBIAN_DIR} --after-install ${DEBIAN_POSTINST}
+        -C ${DEBIAN_DIR} --after-install ${DEBIAN_DIR}/vyos-intel-qat.postinst
 
     echo "I: Cleanup ${DRIVER_NAME} source"
     cd ${CWD}
