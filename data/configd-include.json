@@ -27,6 +27,7 @@
 "nat.py",
 "nat64.py",
 "nat66.py",
+"nat_cgnat.py",
 "netns.py",
 "pki.py",
 "policy.py",
