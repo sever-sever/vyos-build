@@ -1,0 +1,64 @@
+
+# https://clixon-controller-docs.readthedocs.io/en/latest/overview.html
+
+[[packages]]
+name = "cligen"
+commit_id = "7.2.0"
+scm_url = "https://github.com/clicon/cligen.git"
+
+pre_build_hook = """
+sudo useradd clicon -N
+sudo groupadd clicon
+sudo usermod -a -G clicon `whoami`
+"""
+
+build_cmd = """
+./configure && make && sudo make install; sudo ldconfig
+./scripts/build_deb.sh
+"""
+
+
+[[packages]]
+name = "clixon"
+commit_id = "7.2.0"
+scm_url = "https://github.com/clicon/clixon.git"
+
+build_cmd = """
+./configure && make && sudo make install; sudo ldconfig
+./scripts/build_deb.sh
+"""
+
+
+[[packages]]
+name = "clixon-conrtoller"
+commit_id = "1.2.0"
+scm_url = "https://github.com/clicon/clixon-controller.git"
+
+build_cmd = """
+./configure && make && sudo make install; sudo ldconfig
+./scripts/build_deb.sh
+"""
+
+
+[[packages]]
+name = "clixon-pyapi"
+commit_id = "1.2.0"
+scm_url = "https://github.com/clicon/clixon-pyapi.git"
+build_cmd = """
+./scripts/build_deb.sh
+"""
+
+[dependencies]
+packages = [
+#    "python3-coverage",
+#    "python3-iniconfig",
+#    "python3-packaging",
+#    "python3-pluggy",
+#    "python3-pytest",
+#    "python3-pytest-cov",
+#    "python3-PyYAML",
+#    "python3-xmltodict",
+    "build-essential",
+    "libcurl4-openssl-dev"
+]
+
